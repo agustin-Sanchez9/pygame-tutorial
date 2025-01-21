@@ -1,6 +1,11 @@
 import pygame
 from os.path import join
-from random import randint
+from random import randint, uniform
+
+
+#///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 class Player(pygame.sprite.Sprite):
@@ -8,14 +13,14 @@ class Player(pygame.sprite.Sprite):
         super().__init__(groups)
         #setup
         self.image = pygame.image.load(join('space shooter', 'images', 'player.png')).convert_alpha()
-        self.rect = self.image.get_frect(center = (WINDOW_WIDTH/2, WINDOW_HEIGHT/2))
+        self.rect = self.image.get_frect(center = (WINDOW_WIDTH/2, WINDOW_HEIGHT - 200))
         self.direction = pygame.Vector2()
         self.speed = 700
 
         # cooldown
         self.canShoot = True
         self.laserShootTime = 0
-        self.cooldownTime = 500  # in ms
+        self.cooldownTime = 300  # in ms
 
     def laserTimer(self):
         if not self.canShoot:
@@ -32,7 +37,7 @@ class Player(pygame.sprite.Sprite):
         self.rect.center += self.direction * self.speed * dt
         # fire laser
         if self.canShoot: 
-            Laser(spriteGroup, laserSurf, self.rect.midtop)
+            Laser((allGroup, laserGroup), laserSurf, self.rect.midtop)
             self.canShoot = False
             self.laserShootTime = pygame.time.get_ticks()
 
@@ -54,7 +59,7 @@ class Laser(pygame.sprite.Sprite):
         self.rect = self.image.get_frect(midbottom = pos)
 
     def update(self, dt):
-        self.rect.centery -= 600 * dt 
+        self.rect.centery -= 1850 * dt 
         if self.rect.bottom < 0:
             self.kill()
 
@@ -64,16 +69,44 @@ class Meteor(pygame.sprite.Sprite):
         super().__init__(groups)
         self.image = surf
         self.rect = self.image.get_frect(center = pos)
+        self.direction = pygame.Vector2((uniform(-0.5, 0.5), 1))
+        self.speed = randint(100,500)
 
     def update(self, dt):
-        self.rect.centery += 300 * dt
+        self.rect.center += self.direction * self.speed * dt
         if self.rect.top > WINDOW_HEIGHT:
             self.kill()
+
+
+#///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+def collisions():
+    global running
+    playercollisions = pygame.sprite.spritecollide(player, meteorGroup, True)
+
+    if playercollisions:
+        running = False
+
+    for laser in laserGroup:
+        collisions = pygame.sprite.spritecollide(laser, meteorGroup, True)
+        if collisions:
+            laser.kill()
+
+
+def score():
+    currntTime = pygame.time.get_ticks() // 1000
+    textSurf = font.render(str(currntTime), True, 'white')
+    textRect = textSurf.get_frect(midbottom = (WINDOW_WIDTH/2, WINDOW_HEIGHT-30))
+    displaySurface.blit(textSurf, textRect)
+    pygame.draw.rect(displaySurface, 'white', textRect.inflate(20, 15).move(0,-6), 3, 10)
+
 
 pygame.init()
 
 # size of main window
-WINDOW_WIDTH = 840
+WINDOW_WIDTH = 960
 WINDOW_HEIGHT = 960
 
 # creates the main screen/window
@@ -85,17 +118,21 @@ pygame.display.set_caption("Space shooter")
 # made to control frame rate
 clock = pygame.time.Clock()
 
-# import surfaces
+# imports
 starSurface = pygame.image.load(join('space shooter', 'images', 'star.png')).convert_alpha() # the import is made here so its only made once, otherwise in the for loop it will import the image 20 times
 laserSurf = pygame.image.load(join('space shooter', 'images', 'laser.png')).convert_alpha()
 meteorSurf = pygame.image.load(join('space shooter', 'images', 'meteor.png')).convert_alpha()
+font = pygame.font.Font(join('space shooter', 'images', 'Oxanium-Bold.ttf'), 40)
 
 # in a groupo the sprites are sorted by the time has been added, so stars must be created before the player
-spriteGroup = pygame.sprite.Group()
-for i in range(20):
-    Star(spriteGroup, starSurface)
+allGroup = pygame.sprite.Group()
+meteorGroup = pygame.sprite.Group()
+laserGroup = pygame.sprite.Group()
 
-player = Player(spriteGroup)
+for i in range(20):
+    Star(allGroup, starSurface)
+
+player = Player(allGroup)
 
 
 # events
@@ -118,16 +155,20 @@ while running:
         if event.type == meteorEvent:
             x = randint(0,WINDOW_WIDTH)
             y = randint(-200,-100)
-            Meteor(spriteGroup, meteorSurf, (x,y))
+            Meteor((allGroup, meteorGroup), meteorSurf, (x,y))
 
-    spriteGroup.update(dt)
+    allGroup.update(dt)
+
+    collisions()
 
     # draw the game
     displaySurface.fill("black")
+    allGroup.draw(displaySurface)
 
-    spriteGroup.draw(displaySurface)
+    score()
 
-    pygame.display.update() 
+
+    pygame.display.update()
 
 # opposite to init(), nedeed to avoid bugs or bad behavior
 pygame.quit()
