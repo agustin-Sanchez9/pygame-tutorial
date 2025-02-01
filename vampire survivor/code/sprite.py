@@ -82,7 +82,7 @@ class Enemy(pygame.sprite.Sprite):
         self.hitbox = self.rect.inflate(-20, -40)
         self.collSprites = collisionSprites
         self.direction = pygame.Vector2()
-        self.speed = 300
+        self.speed = 200
 
     def move(self, dt):
         # get direction

@@ -27,7 +27,7 @@ class Game:
 
         # enemy timer
         self.enemyEvent = pygame.event.custom_type()
-        pygame.time.set_timer(self.enemyEvent, 1000)
+        pygame.time.set_timer(self.enemyEvent, 100)
         self.spawnPositions = []
 
         self.loadImages()
@@ -46,8 +46,6 @@ class Game:
                     fullPath = join(folderPath, fileName)
                     surf = pygame.image.load(fullPath).convert_alpha()
                     self.enemyFrames[folder].append(surf)
-
-
 
     def input(self):
         if pygame.mouse.get_pressed()[0] and self.canShoot:
@@ -79,8 +77,18 @@ class Game:
                 self.player = Player(self.allSprites, (obj.x,obj.y), self.collisionSprites)
                 self.gun = Gun(self.allSprites, self.player)
             else:
-                self.spawnPositions.append((obj.x, obj.y))
-               
+                self.spawnPositions.append((obj.x, obj.y))       
+
+    def bulletCollision(self):
+        if self.bulletSprites:
+            for bullet in self.bulletSprites:
+                collisionSprites = pygame.sprite.spritecollide(bullet, self.enemySprites, True)
+                if collisionSprites:
+                    bullet.kill()
+
+    def playerCollision(self):
+       if pygame.sprite.spritecollide(self.player, self.enemySprites, False):
+           self.running = False
 
     def run(self):
         while self.running:
@@ -98,6 +106,8 @@ class Game:
             self.gunTimer()
             self.input()
             self.allSprites.update(dt)
+            self.bulletCollision()
+            self.playerCollision()
 
             # draw
             self.displaySurface.fill('black')
